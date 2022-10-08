@@ -1,0 +1,61 @@
+﻿@using Morseor.Model;
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem Class="mt-3" sm="10">
+                <MudStack Row=true Justify="Justify.Center" Spacing="3">
+                    <MudTextField HelperText="The speed of characters in word per minute." FullWidth=true Immediate=true T="int" Label="Char Speed" @bind-Value=@CharSpeed Variant="Variant.Outlined"></MudTextField>
+                </MudStack>
+            </MudItem>
+            <MudItem Class="mt-3" sm="10">
+                <MudStack Row=true Justify="Justify.Center" Spacing="3">
+                    <MudTextField HelperText="Overall speed in words per minute, must be smaller or equal than character speed." Immediate=true Label="Word Speed" T="int" @bind-Value=@WordSpeed Variant="Variant.Outlined"></MudTextField>
+                </MudStack>
+            </MudItem>
+            <MudItem Class="mt-3" sm="10">
+                <MudStack Row=true Justify="Justify.Center" Spacing="3">
+                    <MudTextField HelperText="Tone Frequnecy." Immediate=true Label="Frequency" T="double" @bind-Value=@Frequency Variant="Variant.Outlined"></MudTextField>
+                </MudStack>
+            </MudItem>
+
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public SettingsModel Settings { get; set; }
+
+    SettingsModel NewSettings;
+
+    int CharSpeed { get; set; }
+    int WordSpeed { get; set; }
+    double Frequency { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        CharSpeed = Settings.CharSpeed;
+        WordSpeed = Settings.WordSpeed;
+        Frequency = Settings.Frequency;
+    }
+
+    void Submit()
+    {
+        NewSettings = new SettingsModel();
+
+        NewSettings.CharSpeed = CharSpeed;
+        NewSettings.WordSpeed = WordSpeed;
+        NewSettings.Frequency = Frequency;
+
+        MudDialog.Close(DialogResult.Ok(NewSettings));
+    }
+    void Cancel() => MudDialog.Cancel();
+}

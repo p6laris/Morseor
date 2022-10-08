@@ -1,9 +1,21 @@
 ﻿@page "/Converter"
-@using BlazorAnimation;
-@inherits MorseLazor.Base.ConverterBase;
+@using MorseSharp;
+@using MorseSharp.Audio.Languages
 
 <MudText Typo="Typo.h2">Morse Converter</MudText>
 <MudGrid Class="mt-6">
+    <MudItem xs="12" sm="7">
+        <MudStack Row="true">
+            <MudSelect T="Language" @bind-Value="@Lang" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined" Label="Language" AdornmentIcon="@Icons.Filled.Language" AdornmentColor="Color.Inherit">
+                <MudSelectItem Value="Language.English">English</MudSelectItem>
+                <MudSelectItem Value="Language.Kurdish">Kurdish</MudSelectItem>
+            </MudSelect>
+            <MudIcon Icon="@Icons.Filled.ArrowRightAlt" Style="font-size: 4rem;"></MudIcon>
+            <MudSelect T="string"  AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined" Label="Morse" Disabled=true>
+               <MudSelectItem Value="@("Pizza")">Pizza (Disabled)</MudSelectItem>
+            </MudSelect>
+        </MudStack>
+    </MudItem>
     <MudItem xs="12" sm="7">
         <MudPaper Class="pa-4 mb-5">
             <MudToolBar>
@@ -18,19 +30,19 @@
                 </MudTooltip>
 
                 <MudSpacer />
-                <MudTooltip Text="Show morse with light">
+                @*<MudTooltip Text="Show morse with light">
                     <MudToggleIconButton @bind-Toggled="@CanLight"
                                          Icon="@Icons.Filled.FlashlightOff" Title="Off"
                                          ToggledIcon="@Icons.Filled.FlashlightOn" ToggledColor="@Color.Primary" ToggledTitle="On" />
-                </MudTooltip>
+                </MudTooltip>*@
                 <MudTooltip Text="Settings">
-                    <MudIconButton Icon="@Icons.Filled.SettingsApplications" />
+                    <MudIconButton OnClick="Setting" Icon="@Icons.Filled.SettingsApplications" />
                 </MudTooltip>
                 <MudTooltip Text="Download morse sound">
-                    <MudIconButton OnClick="DownloadMorse" Icon="@Icons.Filled.CloudDownload" />
+                    <MudIconButton Disabled=!CanDownload OnClick="DownloadMorse" Icon="@Icons.Filled.CloudDownload" />
                 </MudTooltip>
                 <MudTooltip Text="Share morse text">
-                    <MudIconButton Icon="@Icons.Filled.IosShare" Color="Color.Inherit" />
+                    <MudIconButton Disabled=!CanShare OnClick="CopyToClipboard" Icon="@Icons.Filled.IosShare" Color="Color.Inherit" />
                 </MudTooltip>
             </MudToolBar>
             <MudDivider></MudDivider>
@@ -41,15 +53,6 @@
                 <MudTextField Class="mt-4" T="string" @bind-Value="@Morse" Label="Morse Code" Immediate=true Disabled=true Variant="Variant.Filled" Lines="5" />
             </MudForm>
 
-        </MudPaper>
-
-
-    </MudItem>
-    <MudItem xs="12" sm="7">
-        <MudPaper hidden="@(!CanLight)" Style="background:black;" Height="400" Width="400">
-            <MudContainer Fixed=true Class="pa-4" MaxWidth="MaxWidth.Small">
-                <MudPaper @ref="LightPaper" Height="300px" Width="400" Square="true" Style="background-color: black;"></MudPaper>
-            </MudContainer>
         </MudPaper>
     </MudItem>
 </MudGrid>

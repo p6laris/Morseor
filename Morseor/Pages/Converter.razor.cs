@@ -2,16 +2,20 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Morseor.Pages;
-using Morseor.Tools.Animation;
-using MorseSharp.MorseConverter;
+using MorseSharp.Audio.Languages;
+using MorseSharp.Converter;
 using MudBlazor;
+using System.Drawing;
 using System.IO;
 using System.Media;
 using System.Runtime.InteropServices;
+using Morseor.Model;
+using ClipLazor.Components;
+using System.Text;
 
-namespace MorseLazor.Base
+namespace Morseor.Pages
 {
-    public class ConverterBase : ComponentBase
+    public partial class Converter
     {
         [Inject]
         public MorseTextConverter morseTextConverter { get; set; } = default!;
@@ -25,11 +29,18 @@ namespace MorseLazor.Base
 
         [Inject]
         public IHowl? SoundManager { get; set; }
+
         [Inject]
         IHowlGlobal? HowlGlobal { get; set; }
 
         [Inject]
         IJSRuntime? JSRuntime { get; set; }
+
+        [Inject]
+        IDialogService? Dialog { get; set; }
+
+        [Inject]
+        ClipLazor.Components.ClipLazor? clipbaord { get; set; }
 
         List<int> Sound = default!;
         public string? Message { get; set; } = string.Empty;
@@ -39,44 +50,59 @@ namespace MorseLazor.Base
         public bool CanPlay { get; set; } = false;
         public bool CanStop { get; set; } = false;
         public bool CanPause { get; set; } = false;
+        public bool CanShare { get; set; } = false;
+        public bool CanDownload { get; set; } = false;
+
 
         Memory<byte> morseAudio = Memory<byte>.Empty;
 
         public List<int> LightSignals = default!;
 
-        public MudPaper? LightPaper;
+        public Language Lang { get; set; }
+
+        public SettingsModel Settings;
+
+       
         protected override void OnInitialized()
         {
             Sound = new List<int>();
             LightSignals = new List<int>();
-            SoundManager!.OnPlay += e =>
+
+            Settings = new SettingsModel()
+            {
+                CharSpeed = 25,
+                WordSpeed = 25,
+                Frequency = 600
+            };
+
+            SoundManager!.OnPlay += async e =>
             {
                 CanPause = true;
                 CanPlay = false;
                 CanStop = true;
                 CanLight = true;
-                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
             };
-            SoundManager!.OnPause += e =>
+            SoundManager!.OnPause += async e =>
             {
                 CanPlay = false;
                 CanStop = true;
-                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
             };
-            SoundManager!.OnStop += e =>
+            SoundManager!.OnStop += async e =>
             {
                 CanPlay = true;
                 CanPause = false;
                 CanStop = false;
 
-                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
             };
-            SoundManager!.OnEnd += e =>
+            SoundManager!.OnEnd += async e =>
             {
                 CanPlay = true;
                 CanPause = false;
                 CanStop = false;
-                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
             };
 
 
@@ -88,11 +114,30 @@ namespace MorseLazor.Base
 
             if (Message!.Length > 0)
             {
+                
                 try
                 {
-                    Morse = await morseTextConverter.ConvertToMorseEnglish(Message!);
-                    morseAudio = await morseAudioConverter.ConvertMorseToAudio(Message!);
+                    if(Lang == Language.English)
+                    {
+                        morseAudioConverter = new MorseAudioConverter(Language.English,
+                            Settings.CharSpeed,
+                            Settings.WordSpeed,
+                            Settings.Frequency);
+                        Morse = await morseTextConverter.ConvertToMorseEnglish(Message!);
+                        morseAudio = await morseAudioConverter.ConvertMorseToAudio(Message!);
+                    }
+                    else
+                    {
+                        morseAudioConverter = new MorseAudioConverter(Language.Kurdish,
+                             Settings.CharSpeed,
+                             Settings.WordSpeed,
+                             Settings.Frequency);
+                        Morse = await morseTextConverter.ConvertToMorseKurdish(Message!);
+                        morseAudio = await morseAudioConverter.ConvertMorseToAudio(Message!);
+                    }
                     CanPlay = true;
+                    CanShare = true;
+                    CanDownload = true;
                 }
                 catch (Exception ex)
                 {
@@ -130,25 +175,35 @@ namespace MorseLazor.Base
             await JSRuntime!.InvokeVoidAsync("downloadFile", "audio/wav", System.Convert.ToBase64String(morseAudio.ToArray()), $"{Message}");
         }
 
-       
-        public async Task AnimateMorse()
+        public async void Setting()
         {
-            await Task.Delay(500);
+            var parameters = new DialogParameters();
+            parameters.Add("Settings", Settings);
+            
 
-            foreach (var morse in Morse!)
+
+            var res = await Dialog!.Show<SettingDialog>("Settings",parameters).Result;
+
+            if (!res.Cancelled)
             {
-                if (morse == '.')
-                    LightPaper.Style = "background-color: #ffffff;";
-                else if (morse == '_')
-                    LightPaper.Style = "background-color: #ffffff;";
-                else
-                    LightPaper.Style = "background-color: #ffffff;";
-
-                StateHasChanged();
-                await Task.Delay(500);
-                LightPaper.Style = "background-color: black;";
-                StateHasChanged();
+                Settings = (SettingsModel)res.Data;
+                await Convert();
+                await InvokeAsync(StateHasChanged);
             }
+        }
+        public async void CopyToClipboard()
+        {
+            StringBuilder strBuilder = new();
+
+            if(Morse.Length > 0)
+            {
+                var response = await clipbaord!.CopyAsync(Morse.AsMemory());
+                strBuilder.Append($"\"{response}\"");
+                strBuilder.Append(" Copied.");
+                snackbar.Add(strBuilder.ToString(), Severity.Info); ;
+            }
+            
         }
     }
 }
+
